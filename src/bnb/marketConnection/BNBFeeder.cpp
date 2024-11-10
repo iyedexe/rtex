@@ -128,7 +128,7 @@ StreamType BNBFeeder<StreamType>::getUpdate() {
 }
 
 template <typename StreamType>
-void BNBFeeder<StreamType>::subscribeToTickers(const std::vector<std::string>& symbols) {
+int BNBFeeder<StreamType>::subscribeToTickers(const std::vector<std::string>& symbols) {
     {
         std::unique_lock<std::mutex> lock(connection_mutex_);
         connection_cv_.wait(lock, [this] { return is_connected_; });
@@ -167,6 +167,7 @@ void BNBFeeder<StreamType>::subscribeToTickers(const std::vector<std::string>& s
 //        LOG_INFO("Subscription request sent for symbols (chunk {} - {}): {} with request ID: {}",
   //                   i + 1, std::min(i + chunk_size, streams.size()), fmt::join(chunk, ", "), request_id);
     }
+    return currentSize;
 }
 
 

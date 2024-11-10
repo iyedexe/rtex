@@ -1,14 +1,14 @@
 #include "common/RecorderMonitor.h"
 #include <iostream>
 
-RecorderMonitor::RecorderMonitor() : 
+RecorderMonitor::RecorderMonitor(const std::string& date) : 
     stopMetricsThread_(false),
     registry_(std::make_shared<prometheus::Registry>()),
     runTimeGauge_(prometheus::BuildGauge()
             .Name("RecorderRunTimeSeconds")
             .Help("Total runtime of the recorder")
             .Register(*registry_)
-            .Add({})),
+            .Add({{"record_date", date}})),
     timeUntilStopGauge_(prometheus::BuildGauge()
             .Name("RecorderTimeUntilStopSeconds")
             .Help("Time left until the recorder stops")
@@ -53,6 +53,16 @@ void RecorderMonitor::updateMetrics(double runTimeSeconds, double timeUntilStopS
                                             .Add({{"instrument", instrument}});
     }
     updatesCounterMap_[instrument]->Increment();
+}
+
+int RecorderMonitor::getUpdatesCount()
+{
+    int updatesCount = 0;
+    for (auto const& it: updatesCounterMap_)
+    {
+        updatesCount+= it.second->Value();
+    }
+    return updatesCount;
 }
 
 void RecorderMonitor::metricsThreadFunction() {

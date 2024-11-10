@@ -11,16 +11,14 @@
 
 class RecorderMonitor {
 public:
-    RecorderMonitor();
+    RecorderMonitor(const std::string& date);
     ~RecorderMonitor();
 
-    // Start the metrics collection
     void start();
-    // Stop the metrics collection
     void stop();
 
-    // Function to update the metrics
     void updateMetrics(double runTimeSeconds, double timeUntilStopSeconds, int subscribedInstruments, const std::string& instrument);
+    int getUpdatesCount();
 
 private:
     void metricsThreadFunction();

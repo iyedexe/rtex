@@ -2,7 +2,7 @@
 #include "common/logger.hpp"
 
 BNBRecorder::BNBRecorder(const BNBMarketConnectionConfig& config, const std::string& date, const std::string& symbol)
-    : broker_(config), feeder_(config), date_(date), symbol_(symbol), scheduler_(date), monitor_(){
+    : broker_(config), feeder_(config), date_(date), symbol_(symbol), scheduler_(date), monitor_(date){
     LOG_INFO("BNBRecorder initialized with date: {} and symbol: {}", date_, symbol_);
 }
 
@@ -69,17 +69,28 @@ void BNBRecorder::run() {
         LOG_INFO("Subscribing to symbol: {}", symbol_);
     }
 
-    feeder_.subscribeToTickers(subscriptionList);
+    auto subscribedTickerCount = feeder_.subscribeToTickers(subscriptionList);
     monitor_.start();
 
-    auto end_time = scheduler_.endTime();
-    while (std::chrono::system_clock::now() < end_time) {
+    auto lastLogTime = std::chrono::system_clock::now();
+    while (std::chrono::system_clock::now() < endTime) {
         try {
             auto dataFrame = feeder_.getUpdate();
             std::chrono::seconds timeToStart = scheduler_.timeUntil(scheduler_.startTime());
-            std::chrono::seconds timeToEnd = scheduler_.timeUntil(scheduler_.endTime());
-            monitor_.updateMetrics(timeToStart.count(), timeToEnd.count(), subscriptionList.size(), dataFrame.symbol);
+            std::chrono::seconds timeToEnd = scheduler_.timeUntil(endTime);
+            monitor_.updateMetrics(timeToStart.count(), timeToEnd.count(), subscribedTickerCount, dataFrame.symbol);
             recordData(dataFrame.symbol, dataFrame.to_str());
+
+            auto now = std::chrono::system_clock::now();
+            if (std::chrono::duration_cast<std::chrono::minutes>(now - lastLogTime).count() >= 30) {
+
+                auto now_c = std::chrono::system_clock::to_time_t(now);
+                std::ostringstream oss;
+                oss << std::put_time(std::gmtime(&now_c), "%Y-%m-%d %H:%M:%S");
+                LOG_INFO("Periodic log - Current time: {}, Total updates: {}", oss.str(), monitor_.getUpdatesCount());
+                
+                lastLogTime = now;
+            }
 
         } catch (const std::exception& e) {
             LOG_ERROR("Error in recorder loop: {}", e.what());

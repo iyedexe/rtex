@@ -22,7 +22,7 @@ public:
     BNBFeeder(const BNBMarketConnectionConfig& config);
     virtual ~BNBFeeder();
 
-    void subscribeToTickers(const std::vector<std::string>& symbols);
+    int subscribeToTickers(const std::vector<std::string>& symbols);
     void start();
     void stop();
     StreamType getUpdate();
