@@ -46,19 +46,19 @@ int main(int argc, char* argv[]) {
 
     auto mcConfig = loadConfig(configFile);
 
-    IStrategy* strategy;
+    std::unique_ptr<IStrategy> strategy;
     if (strategyName == "CircularArb") 
     {
         auto config = CircularArb::loadConfig(configFile);
         strategy = std::make_unique<CircularArb>(config, mcConfig);
     }
-
+/*
     try {
         strategy->run();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
+*/
     return 0;
 }

@@ -1,6 +1,7 @@
-// IStrategy.h
 #pragma once
 #include <string>
+#include "fin/Signal.h"
+#include "bnb/marketData/BookTickerMDFrame.h"
 
 // Interface for all trading strategies
 class IStrategy {

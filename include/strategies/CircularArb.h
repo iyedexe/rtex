@@ -7,18 +7,20 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <stdexcept>
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "IStrategy.h"
 #include "bnb/marketData/BookTickerMDFrame.h"
-#include "utils/SymbolFilter.h"
+#include "bnb/marketData/MarketDataFrame.h"
+#include "bnb/utils/SymbolFilter.h"
 #include "fin/Order.h"
 #include "fin/Symbol.h"
 #include "fin/Signal.h"
 #include "bnb/marketConnection/BNBBroker.h"
 #include "bnb/marketConnection/BNBFeeder.h"
 #include "bnb/marketConnection/BNBMarketConnectionConfig.h"
+
+#include "bnb/utils/BNBRequests.h"
+#include "bnb/utils/ExchangeInfo.h"
 
 const double FEE = 0.1;
 const double RISK = 1.0;
@@ -27,13 +29,11 @@ struct CircularArbConfig {
     std::string startingCoin;
 };
 
-// Circular Arbitrage Strategy
 class CircularArb : public IStrategy {
 public:
     CircularArb(const CircularArbConfig& config, const BNBMarketConnectionConfig& mcConfig);
     virtual ~CircularArb() = default;
 
-    // Override the methods from the IStrategy interface
     std::optional<Signal> onMarketData(const BookTickerMDFrame& data) override;
     void initialize() override;
     void shutdown() override;
@@ -51,7 +51,6 @@ private:
     BNBBroker broker_;
     BNBFeeder<BookTickerMDFrame> feeder_;
 
-    // Helper methods
     std::vector<Order> getPossibleOrders(const std::string& coin, const std::vector<Symbol>& relatedSymbols);
     void computeArbitragePaths(const std::vector<Symbol>& fullPairsUniverse);
     std::optional<Signal> evaluatePath(const std::vector<Order>& path);

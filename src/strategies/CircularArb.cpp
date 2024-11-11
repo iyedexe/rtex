@@ -1,31 +1,23 @@
 #include "strategies/CircularArb.h"
-#include "bnb/utils/ExchangeInfo.h"
+
 #include <algorithm>
 #include <iostream>
 #include <chrono>
 #include <numeric>
+
+#include "common/logger.hpp"
 
 CircularArb::CircularArb(const CircularArbConfig& config, const BNBMarketConnectionConfig& mcConfig)
     : startingCoin_(config.startingCoin), broker_(mcConfig), feeder_(mcConfig){
     initialize();
 } 
 
-
 void CircularArb::initialize() {
-    try {
-        auto logger = spdlog::stdout_color_mt("circulararb_logger");
-        spdlog::set_default_logger(logger);
-        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%^%l%$] %v");
-    } catch (const spdlog::spdlog_ex& ex) {
-        std::cerr << "Log initialization failed: " << ex.what() << std::endl;
-    }
     LOG_INFO("CircularArb initialized with starting coin: {}", startingCoin_);
-
-    LOG_INFO("Initializing Triangular Arbitrage Strategy...");
 
     broker_.start();
     feeder_.start();
-    std::string requestId = broker_.getExchangeInfo();
+    std::string requestId = broker_.sendRequest(&BNBRequests::getExchangeInfo, {});
 
     LOG_INFO("Waiting for exchange info response...");
     nlohmann::json response = broker_.getResponseForId(requestId);
@@ -108,7 +100,7 @@ void CircularArb::computeArbitragePaths(const std::vector<Symbol>& relatedSymbol
         stratPaths_ = paths;
     }
 
-    LOG_INFO("Found " + std::to_string(stratPaths_.size()) + " possible paths for arbitrage starting on " + startingCoin_);
+    //LOG_INFO("Found " + std::to_string(stratPaths_.size()) + " possible paths for arbitrage starting on " + startingCoin_);
 }
 
 // Evaluate potential arbitrage path profitability
@@ -179,7 +171,7 @@ void CircularArb::run() {
             std::optional<Signal> sig = onMarketData(update);
             if (sig.has_value())
             {
-                broker_.executeOrders(sig->orders);
+//                broker_.executeOrders(sig->orders);
             }
         } catch (const std::exception& e) {
             LOG_ERROR("Error in Circular Arb loop: {}", e.what());

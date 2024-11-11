@@ -1,5 +1,4 @@
-// SymbolFilter.cpp
-#include "SymbolFilter.h"
+#include "bnb/utils/SymbolFilter.h"
 
 // Helper function to round values
 double SymbolFilter::roundToNearest(double value, double stepSize, bool roundUp) {
