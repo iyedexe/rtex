@@ -16,6 +16,9 @@ It also exposes the recording metrics on a prometheus client page to be scrapped
 The circular arbitrage strategy has been implemented, not yet tested nor backtested.
 
 # Next steps.
+Generic Istrategy onmarket data handler.   
+Generic Recorder for MDframes.   
+Config file base recorder monitor port and configuration.   
 Implement ED25519 and RSA auth on message sign for BNB Broker.   
 Add into recorder configuration, recording of related symbols to certain coins.     
 Find a method to bypass binance streams limitations.     
@@ -23,6 +26,8 @@ Archive recoding files bz2 and send to a datalake to be queried from a webinterf
 Add unit tests.  
 
 # Done.
+Refactor scheduler for less functions.   
+Refactor BNB Broker to pass methods for calls to API.    
 Investigate crashes at recorder (feeder) after a few hours run and add retry protocol.  
 Impelment a recovery mechanism in case of crash for feeder.   
 Replace logging library with Quill for perf : https://github.com/odygrd/quill?tab=readme-ov-file#-table-of-contents.   

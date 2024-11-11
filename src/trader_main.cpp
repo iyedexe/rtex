@@ -4,8 +4,9 @@
 #include <getopt.h>
 
 void printUsage(const std::string& programName) {
-    std::cout << "Usage: " << programName << " --configfile <path_to_ini>" << std::endl;
+    std::cout << "Usage: " << programName << " --configfile <path_to_ini> --strategy <strategy_name>" << std::endl;
     std::cout << "       --configfile: Path to the configuration INI file." << std::endl;
+    std::cout << "       --strategy  : Name of the trading strategy to run." << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -15,7 +16,7 @@ int main(int argc, char* argv[]) {
     // Option parsing
     static struct option long_options[] = {
         {"configfile", required_argument, 0, 'c'},
-        {"strategy", required_argument, 0, 'c'},
+        {"strategy", required_argument, 0, 's'},
         {0, 0, 0, 0}
     };
 

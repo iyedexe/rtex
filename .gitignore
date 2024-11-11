@@ -1,5 +1,6 @@
 build
 log
+config/*
 .vscode
 **.pem
 **.pub
