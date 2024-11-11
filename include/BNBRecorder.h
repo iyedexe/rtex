@@ -24,6 +24,10 @@ public:
     void run();
 
 private:
+
+    bool startComponents();
+    std::vector<std::string> getSubscriptionList(const std::string& symbol);
+
     void recordData(const std::string& ticker, const std::string& data);
     void openFileForSymbol(const std::string& ticker);
     void closeFiles();

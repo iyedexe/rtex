@@ -4,30 +4,45 @@
 #include <thread>
 #include <stdexcept>
 
-// Helper to convert tm to time_t in UTC (using timegm)
-std::time_t Scheduler::toTimeT(const std::tm& time_struct) const {
-    return timegm(const_cast<std::tm*>(&time_struct));  // Uses timegm for GMT conversion
-}
-
 Scheduler::Scheduler(const std::string& date) {
-    // Parse date string (YYYY-MM-DD) into tm structure
-    strptime(date.c_str(), "%Y-%m-%d", &target_date_);
-    // Set time to 00:00:00 to ensure the start is midnight
-    target_date_.tm_hour = 0;
-    target_date_.tm_min = 0;
-    target_date_.tm_sec = 0;
+    currentDate_ = date;
+    std::tm tm = {};
+    std::istringstream ss(date);
+    ss >> std::get_time(&tm, "%Y-%m-%d");
+    if (ss.fail()) {
+        throw std::runtime_error("Failed to parse date string");
+    }
+    {
+        tm.tm_hour = 0;
+        tm.tm_min = 0;
+        tm.tm_sec = 0;
+        std::time_t time = timegm(&tm);
+        startTime_ = std::chrono::system_clock::from_time_t(time);
+    }
+    {
+        tm.tm_hour = 23;
+        tm.tm_min = 59;
+        tm.tm_sec = 59;
+        std::time_t time = timegm(&tm);
+        stopTime_ = std::chrono::system_clock::from_time_t(time);
+    }
 }
 
-bool Scheduler::isFuture() const {
-    return std::difftime(toTimeT(target_date_), std::time(nullptr)) > 0;
-}
+bool Scheduler::waitStart() {
+    auto timeToStart = timeUntil(startTime_);
+    auto timeToStop = timeUntil(stopTime_);
+    if (timeToStop.count()<0) {
+        LOG_ERROR("[SCHEDULER] Date {} is in the past. Exiting.", currentDate_);
+        return false;
+    }
+    if (timeToStart.count()>0) {
+        LOG_INFO("[SCHEDULER] Date {} is in the future. Scheduling start at {} ({}), which is in {}.",
+                currentDate_, printTime(startTime_), printTime(startTime_, true), printDuration(timeToStart));
 
-bool Scheduler::isToday() const {
-    std::time_t now = std::time(nullptr);
-    std::tm* now_tm = std::gmtime(&now);  // Use GMT for comparison
-    return target_date_.tm_year == now_tm->tm_year &&
-           target_date_.tm_mon == now_tm->tm_mon &&
-           target_date_.tm_mday == now_tm->tm_mday;
+        std::this_thread::sleep_for(timeToStart);
+    }    
+    LOG_INFO("[SCHEDULER] Date {} is today, starting ...", currentDate_);
+    return true;
 }
 
 std::chrono::seconds Scheduler::timeUntil(const std::chrono::system_clock::time_point& time_point) const {
@@ -35,20 +50,7 @@ std::chrono::seconds Scheduler::timeUntil(const std::chrono::system_clock::time_
     return std::chrono::duration_cast<std::chrono::seconds>(time_point - now);
 }
 
-std::chrono::system_clock::time_point Scheduler::startTime() const {
-    // Create a time_point for 00:00:00 GMT on the target day
-    return std::chrono::system_clock::from_time_t(toTimeT(target_date_));
-}
-
-std::chrono::system_clock::time_point Scheduler::endTime() const {
-    std::tm end_day = target_date_;
-    end_day.tm_hour = 23;
-    end_day.tm_min = 59;
-    end_day.tm_sec = 59;
-    return std::chrono::system_clock::from_time_t(toTimeT(end_day));
-}
-
-std::string Scheduler::humanReadable(std::chrono::seconds duration) const {
+std::string Scheduler::printDuration(std::chrono::seconds duration) const {
     auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
     duration -= hours;
     auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
@@ -61,7 +63,7 @@ std::string Scheduler::humanReadable(std::chrono::seconds duration) const {
     return ss.str();
 }
 
-std::string Scheduler::formattedTime(const std::chrono::system_clock::time_point& time_point, bool local) const {
+std::string Scheduler::printTime(const std::chrono::system_clock::time_point& time_point, bool local) const {
     std::time_t time_t_value = std::chrono::system_clock::to_time_t(time_point);
     std::tm* time_tm = local ? std::localtime(&time_t_value) : std::gmtime(&time_t_value);
 

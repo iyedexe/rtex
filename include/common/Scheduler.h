@@ -1,25 +1,23 @@
-#ifndef SCHEDULER_H
-#define SCHEDULER_H
+#pragma once
 
 #include <chrono>
 #include <string>
 #include <ctime>
+#include "logger.hpp"
 
 class Scheduler {
 public:
     explicit Scheduler(const std::string& date); // Constructor
-
-    bool isFuture() const;    // Check if date is in the future
-    bool isToday() const;     // Check if date is today
-    std::chrono::seconds timeUntil(const std::chrono::system_clock::time_point& time_point) const; // Get time until the specified time_point
-    std::chrono::system_clock::time_point startTime() const;  // Start of the target day at 00:00:00 GMT
-    std::chrono::system_clock::time_point endTime() const;    // End of the target day at 23:59:59 GMT
-    std::string humanReadable(std::chrono::seconds duration) const; // Human-readable duration
-    std::string formattedTime(const std::chrono::system_clock::time_point& time_point, bool local = false) const; // Formatted time (GMT or local)
+    bool waitStart();
+    std::chrono::system_clock::time_point getStartTime() const {return startTime_;}
+    std::chrono::system_clock::time_point getStopTime() const {return stopTime_;}
+    std::chrono::seconds timeUntil(const std::chrono::system_clock::time_point& time_point) const;
 
 private:
-    std::tm target_date_;  // Target date in std::tm format
-    std::time_t toTimeT(const std::tm& time_struct) const;  // Helper to convert tm to time_t
-};
+    std::string currentDate_;
+    std::chrono::system_clock::time_point startTime_;
+    std::chrono::system_clock::time_point stopTime_;
 
-#endif // SCHEDULER_H
+    std::string printDuration(std::chrono::seconds duration) const;
+    std::string printTime(const std::chrono::system_clock::time_point& time_point, bool local = false) const; // Formatted time (GMT or local)
+};

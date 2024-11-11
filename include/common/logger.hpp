@@ -14,7 +14,10 @@ namespace {
             quill::Backend::start();
 
             return quill::Frontend::create_or_get_logger(
-                "root", quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink_id_1"));
+                "root", 
+                quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink_id_1"),
+                quill::PatternFormatterOptions {"[%(time)] [PID=%(process_id)] [TID=%(thread_id)] [LOG_%(log_level:<4)] %(message)", "%Y-%m-%d %H:%M:%S.%Qns", quill::Timezone::GmtTime }
+            );
         }();
         return logger;
     }
