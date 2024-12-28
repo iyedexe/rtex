@@ -38,6 +38,7 @@ public:
     void setPrice(double value) { _price = value; }
 
     std::string to_str() const {
-        return std::to_string(static_cast<int>(_way)) + "@" + _symbol.to_str();
+        std::string wayStr= (static_cast<int>(_way)==0) ? "BUY" : "SELL";
+        return wayStr + "@" + _symbol.to_str();
     }
 };

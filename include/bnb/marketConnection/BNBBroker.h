@@ -41,7 +41,6 @@ public:
         LOG_INFO("[BNBBroker] Sending request");
         // Wait until connected
         {
-            LOG_INFO("[BNBBroker] Waiting for connectino");
             std::unique_lock<std::mutex> lock(connection_mutex_);
             connection_cv_.wait(lock, [this] { return is_connected_; });
         }
@@ -59,7 +58,7 @@ public:
         }
 
         send(req.second);
-        LOG_INFO("Request sent, ID: {}", req.first);
+        LOG_INFO("[BNBBroker] Request sent, ID: {}", req.first);
         return req.first;
     }
     nlohmann::json getResponseForId(const std::string& id);

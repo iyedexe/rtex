@@ -1,6 +1,4 @@
-// ExchangeInfo.h
-#ifndef EXCHANGE_INFO_H
-#define EXCHANGE_INFO_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -8,6 +6,10 @@
 #include <memory>
 #include "bnb/utils/SymbolFilter.h"
 #include "fin/Symbol.h"
+#include <nlohmann/json.hpp>
+#include <stdexcept>
+#include <iostream>
+using json = nlohmann::json;
 
 struct SymbolJson {
     std::string name;
@@ -19,15 +21,13 @@ struct SymbolJson {
 
 class ExchangeInfo {
 private:
-    std::vector<SymbolJson> symbols;
+    std::vector<SymbolJson> symbols_;
 
 public:
-    ExchangeInfo(const std::string& jsonData);
+    explicit ExchangeInfo(const nlohmann::json& jsonData);
 
     std::vector<Symbol> getSymbols() const;
     std::vector<Symbol> getRelatedSymbols(std::string asset) const;
 
     SymbolFilter createSymbolFilter(const std::string& symbolName) const;
 };
-
-#endif // EXCHANGE_INFO_H

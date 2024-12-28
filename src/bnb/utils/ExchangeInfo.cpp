@@ -1,41 +1,36 @@
-// ExchangeInfo.cpp
+#include "common/logger.hpp"
 #include "bnb/utils/ExchangeInfo.h"
-#include <nlohmann/json.hpp>  // Include nlohmann json library
-#include <stdexcept>
-#include <iostream>
 
-using json = nlohmann::json;
-
-// Constructor to initialize from JSON string
-ExchangeInfo::ExchangeInfo(const std::string& jsonData) {
-    json root = json::parse(jsonData); // Parse JSON data
-
-    // Parse symbols
-    const json& symbolsJson = root["result"]["symbols"];
-    for (const auto& symbolJson : symbolsJson) {
-        SymbolJson symbol;
-        symbol.name = symbolJson["symbol"].get<std::string>();
-        symbol.status = symbolJson["status"].get<std::string>();
-        symbol.baseAsset = symbolJson["baseAsset"].get<std::string>();
-        symbol.quoteAsset = symbolJson["quoteAsset"].get<std::string>();
-        
-        // Store symbol filters
-        for (const auto& filter : symbolJson["filters"]) {
-            std::map<std::string, std::string> filterMap;
-            for (const auto& [key, value] : filter.items()) {
-                filterMap[key] = value.get<std::string>();
+ExchangeInfo::ExchangeInfo(const json& jsonData) {
+    try
+    {
+        const json& symbolsJson = jsonData["result"]["symbols"];
+        for (const auto& symbolJson : symbolsJson) {
+            SymbolJson symbol;
+            symbol.name = symbolJson["symbol"].get<std::string>();
+            symbol.status = symbolJson["status"].get<std::string>();
+            symbol.baseAsset = symbolJson["baseAsset"].get<std::string>();
+            symbol.quoteAsset = symbolJson["quoteAsset"].get<std::string>();
+            
+            for (const auto& filter : symbolJson["filters"]) {
+                
+                // symbol.filters.push_back(filter);
             }
-            symbol.filters.push_back(filterMap);
-        }
 
-        symbols.push_back(symbol);
+            symbols_.push_back(symbol);
+        }
     }
+    catch(const std::exception& e)
+    {
+        LOG_ERROR("Error parsing exchange info : {}", e.what());
+    }
+    
 }
 
 // Method to get all symbols that are trading
 std::vector<Symbol> ExchangeInfo::getSymbols() const {
     std::vector<Symbol> tradingSymbols;
-    for (const auto& symbol : symbols) {
+    for (const auto& symbol : symbols_) {
         if (symbol.status == "TRADING") {
             auto sym = Symbol(symbol.baseAsset, symbol.quoteAsset, symbol.name, createSymbolFilter(symbol.name));
             tradingSymbols.push_back(sym);
@@ -46,7 +41,7 @@ std::vector<Symbol> ExchangeInfo::getSymbols() const {
 
 std::vector<Symbol> ExchangeInfo::getRelatedSymbols(std::string asset) const {
     std::vector<Symbol> relatedSymbols;
-    for (const auto& symbol : symbols) {
+    for (const auto& symbol : symbols_) {
         if ((symbol.status == "TRADING") && ((symbol.baseAsset == asset) || (symbol.quoteAsset == asset))) {
             auto sym = Symbol(symbol.baseAsset, symbol.quoteAsset, symbol.name, createSymbolFilter(symbol.name));
             relatedSymbols.push_back(sym);
@@ -57,7 +52,7 @@ std::vector<Symbol> ExchangeInfo::getRelatedSymbols(std::string asset) const {
 
 // Factory method to create SymbolFilter for a specific symbol
 SymbolFilter ExchangeInfo::createSymbolFilter(const std::string& symbolName) const {
-    for (const auto& symbol : symbols) {
+    for (const auto& symbol : symbols_) {
         if (symbol.name == symbolName) {
             PriceFilter pf = {0, 0, 0};
             LotSizeFilter lsf = {0, 0, 0};

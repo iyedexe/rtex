@@ -41,7 +41,9 @@ bool Scheduler::waitStart() {
 
         std::this_thread::sleep_for(timeToStart);
     }    
-    LOG_INFO("[SCHEDULER] Date {} is today, starting ...", currentDate_);
+    LOG_INFO("[SCHEDULER] Date {} is today, starting now. Scheduling stop at {} ({}), which is in {}.",
+                currentDate_, printTime(stopTime_), printTime(stopTime_, true), printDuration(timeToStop));
+
     return true;
 }
 

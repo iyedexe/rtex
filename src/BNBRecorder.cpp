@@ -11,14 +11,12 @@ BNBRecorder::~BNBRecorder() {
     closeFiles();
     broker_.stop();
     feeder_.stop();
-    monitor_.stop();
 }
 
 bool BNBRecorder::startComponents() {
     try {
         broker_.start();
         feeder_.start();
-        monitor_.start();
         return true;
     } catch (const std::exception& e) {
         LOG_CRITICAL("[RECORDER] Exception while starting broker/feeder: {}", e.what());

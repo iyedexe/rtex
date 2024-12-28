@@ -52,6 +52,6 @@ private:
     BNBFeeder<BookTickerMDFrame> feeder_;
 
     std::vector<Order> getPossibleOrders(const std::string& coin, const std::vector<Symbol>& relatedSymbols);
-    void computeArbitragePaths(const std::vector<Symbol>& fullPairsUniverse);
+    std::vector<std::vector<Order>> computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingCoin, int arbitrageDepth);
     std::optional<Signal> evaluatePath(const std::vector<Order>& path);
 };

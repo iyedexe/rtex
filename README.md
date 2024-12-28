@@ -13,9 +13,12 @@ a backtester that determines several metrics about a strategy in a specified tim
 So far the recorder is ready, subscribing to market data streams and recording them into flat csv files for future usage.    
 It also exposes the recording metrics on a prometheus client page to be scrapped and analyzed.   
 ## LiveTrader:
-The circular arbitrage strategy has been implemented, not yet tested nor backtested.
+The circular arbitrage strategy has been implemented, not yet tested nor backtested.   
+Still missing core components.   
 
 # Next steps.
+Get account balances and store in circular arb strategy.    
+Symbol filter parse and refactor factory.   
 Generic Istrategy onmarket data handler.   
 Generic Recorder for MDframes.   
 Config file base recorder monitor port and configuration.   
@@ -38,6 +41,12 @@ Replace logging library with Quill for perf : https://github.com/odygrd/quill?ta
 ```
 /recorder --symbol all --date 2024-09-21 --configfile ../config/test_config.ini 
 ```
+
+## Run the trader
+```
+./trader --configfile ../config/trader_config.ini --strategy CircularArb
+```
+
 # But before setup the project !
 ## Install dependecies (Fedora instructions) :
 Installation on debian varies so be careful on package names and install commands.   

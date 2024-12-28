@@ -21,22 +21,19 @@ BNBBroker::BNBBroker(const BNBMarketConnectionConfig& config):
     }
     requests_ = std::make_unique<BNBRequests>(config.apiKey, secretKey_);
 
-    LOG_INFO("[BNBBroker] BNBBroker initialized with API Endpoint: {}", uri_);
+    LOG_INFO("[BNBBroker] BNBBroker initialized with API Endpoint: {}, sign method used : {}", uri_, signMethod_);
 }
 
 BNBBroker::~BNBBroker() {
     stop();
-    LOG_INFO("BNBBroker destroyed.");
+    LOG_INFO("[BNBBroker] BNBBroker destroyed.");
 }
 
 void BNBBroker::start() {
-    LOG_INFO("[BNBBroker] Starting BNBBroker");
     bws_thread_ = std::thread([this]() {
         brunning_ = true;
-        LOG_INFO("[BNBBroker] Connecting ..");
         connect(uri_);
         WebSocketListener::startClient();
-        LOG_INFO("[BNBBroker] BNBBroker WebSocket connection lost");
     });
     if (loginOnConnection_)
     {
@@ -51,12 +48,12 @@ void BNBBroker::start() {
 
 void BNBBroker::stop() {
     if (brunning_) {
-        LOG_INFO("Stopping BNBBroker WebSocket connection...");
+        LOG_INFO("[BNBBroker] Stopping BNBBroker WebSocket connection...");
         stopClient();
         brunning_ = false;
         if (bws_thread_.joinable()) {
             bws_thread_.join();
-            LOG_INFO("WebSocket connection thread joined.");
+            LOG_INFO("[BNBBroker] WebSocket connection thread joined.");
         }
     }
 }
@@ -65,16 +62,16 @@ nlohmann::json BNBBroker::getResponseForId(const std::string& id) {
     std::unique_lock<std::mutex> lock(response_mutex_);
 
     if (pending_requests_.find(id) == pending_requests_.end()) {
-        LOG_WARNING("Request ID not found: {}", id);
+        LOG_WARNING("[BNBBroker] Request ID not found: {}", id);
         throw std::runtime_error("Request ID not found or no request was made with this ID.");
     }
 
-    LOG_INFO("Waiting for response for Request ID: {}", id);
+    LOG_INFO("[BNBBroker] Waiting for response for Request ID: {}", id);
     response_cv_.wait(lock, [this, &id]() {
         return stored_responses_.find(id) != stored_responses_.end();
     });
 
-    LOG_INFO("Response received for Request ID: {}", id);
+    LOG_INFO("[BNBBroker] Response received for Request ID: {}", id);
     return stored_responses_[id];
 }
 
@@ -93,14 +90,14 @@ void BNBBroker::onMessage(websocketpp::connection_hdl hdl, websocketpp::client<w
                 int errorCode = json_data["error"].value("code", 0);
                 std::string errorMsg = json_data["error"].value("msg", "Unknown error");
                 isError=true;
-                LOG_ERROR("[BROKER] Error received for message id {} : Status: {}, Code: {}, Message: {}", id, status, errorCode, errorMsg);
+                LOG_ERROR("[BNBBroker] Error received for message id {} : Status: {}, Code: {}, Message: {}", id, status, errorCode, errorMsg);
             }
 
             if (id == loginRequestId_)
             {
                 if (isError)
                 {
-                    throw std::runtime_error("[BROKER] Authorization failed see error above");
+                    throw std::runtime_error("[BNBBroker] Authorization failed see error above");
                 }
                 std::unique_lock<std::mutex> lock(login_mutex_);
                 if (json_data.contains("result")) {
@@ -108,7 +105,7 @@ void BNBBroker::onMessage(websocketpp::connection_hdl hdl, websocketpp::client<w
                     std::string authorizedSince = json_data["result"].value("authorizedSince", "");
                     if (apiKey.empty() || authorizedSince.empty())
                     {
-                        throw std::runtime_error("BROKER] Authorization failed see error above, response apiKey: "+apiKey+", authorizedSince: "+authorizedSince);
+                        throw std::runtime_error("[BNBBroker] Authorization failed see error above, response apiKey: "+apiKey+", authorizedSince: "+authorizedSince);
                     }
                     login_cv_.notify_all();
                 }
@@ -117,15 +114,15 @@ void BNBBroker::onMessage(websocketpp::connection_hdl hdl, websocketpp::client<w
             stored_responses_[id] = std::move(json_data);
             pending_requests_.erase(id);
 
-            LOG_INFO("[BROKER] Response stored for ID: {}", id);
+            LOG_INFO("[BNBBroker] Response stored for ID: {}", id);
             response_cv_.notify_all();
         } else {
-            LOG_WARNING("[BROKER] Received a message without an ID. Message: {}", payload);
+            LOG_WARNING("[BNBBroker] Received a message without an ID. Message: {}", payload);
         }
     }
     catch(const std::exception& e)
     {
-        LOG_ERROR("[BROKER] onMessage error: {}", e.what());
+        LOG_ERROR("[BNBBroker] onMessage error: {}", e.what());
     }
 }
 

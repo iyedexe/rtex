@@ -13,23 +13,36 @@ CircularArb::CircularArb(const CircularArbConfig& config, const BNBMarketConnect
 } 
 
 void CircularArb::initialize() {
-    LOG_INFO("CircularArb initialized with starting coin: {}", startingCoin_);
+    LOG_INFO("[STRATEGY] CircularArb initialized with starting coin: {}", startingCoin_);
 
     broker_.start();
     feeder_.start();
+
+    LOG_INFO("[STRATEGY] Waiting for exchange info response...");
     std::string requestId = broker_.sendRequest(&BNBRequests::getExchangeInfo, {});
-
-    LOG_INFO("Waiting for exchange info response...");
     nlohmann::json response = broker_.getResponseForId(requestId);
-
     auto exInfo = ExchangeInfo(response);
 
-    std::vector<Symbol> relatedSym = exInfo.getRelatedSymbols(startingCoin_);
-    computeArbitragePaths(relatedSym);
+    std::vector<Symbol> symbolsList = exInfo.getSymbols();
+    stratPaths_ = computeArbitragePaths(symbolsList, startingCoin_, 3);
+    LOG_INFO("Number of arb paths : {}", stratPaths_.size());
+
+    std::set<std::string> relatedSymbols;
+    for (auto path: stratPaths_)
+    {
+        std::string pathDescription;
+        for (auto order: path)
+        {
+            relatedSymbols.insert(order.getSymbol().getSymbol());
+            pathDescription += order.to_str() + " ";
+        }
+        LOG_INFO("Arbitrage path : {}", pathDescription);
+    }
+    feeder_.subscribeToTickers({relatedSymbols.begin(), relatedSymbols.end()});
 }
 
 void CircularArb::shutdown() {
-    LOG_INFO("Shutting down Triangular Arbitrage Strategy...");
+    LOG_INFO("[STRATEGY] Shutting down Triangular Arbitrage Strategy...");
     broker_.stop();
     feeder_.stop();
 }
@@ -65,30 +78,29 @@ std::vector<Order> CircularArb::getPossibleOrders(const std::string& coin, const
 }
 
 // Compute all potential triangular arbitrage paths
-void CircularArb::computeArbitragePaths(const std::vector<Symbol>& relatedSymbols) {
+std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingCoin, int arbitrageDepth) {
     LOG_INFO("Computing arbitrage paths...");
-
-    auto firstOrders = getPossibleOrders(startingCoin_, relatedSymbols);
+    std::vector<std::vector<Order>> stratPaths; 
+    auto firstOrders = getPossibleOrders(startingCoin, symbolsList);
     for (const auto& order : firstOrders) {
-        stratPaths_.push_back({order});
+        stratPaths.push_back({order});
     }
 
-    const int arbitrageDepth = 3;
     for (int i = 0; i < arbitrageDepth - 1; ++i) {
         std::vector<std::vector<Order>> paths;
-        for (const auto& path : stratPaths_) {
+        for (const auto& path : stratPaths) {
             Order lastOrder = path.back();
-            std::string resultingCoin = lastOrder.getWay() == Way::SELL ? lastOrder.getSymbol().getQuote() : lastOrder.getSymbol().getBase();
+            std::string resultingCoin = (lastOrder.getWay() == Way::SELL) ? lastOrder.getSymbol().getQuote() : lastOrder.getSymbol().getBase();
             std::vector<Symbol> unusedSymbols;
-            for (const auto& symbol : relatedSymbols) {
+            for (const auto& symbol : symbolsList) {
                 if (std::find_if(path.begin(), path.end(), [&symbol](const Order& order) { return order.getSymbol() == symbol; }) == path.end()) {
                     unusedSymbols.push_back(symbol);
                 }
             }
             std::vector<Order> possibleNextOrders = getPossibleOrders(resultingCoin, unusedSymbols);
             for (const auto& nextOrder : possibleNextOrders) {
-                std::string resultingCoin = nextOrder.getWay() == Way::SELL ? nextOrder.getSymbol().getQuote() : nextOrder.getSymbol().getBase();
-                if ((i == arbitrageDepth -1) && (resultingCoin != startingCoin_))
+                std::string resultingCoin = (nextOrder.getWay() == Way::SELL) ? nextOrder.getSymbol().getQuote() : nextOrder.getSymbol().getBase();
+                if ((i==arbitrageDepth-2) & (resultingCoin != startingCoin_))
                 {
                     continue;
                 }
@@ -97,10 +109,9 @@ void CircularArb::computeArbitragePaths(const std::vector<Symbol>& relatedSymbol
                 paths.push_back(newPath);
             }
         }
-        stratPaths_ = paths;
+        stratPaths = paths;
     }
-
-    //LOG_INFO("Found " + std::to_string(stratPaths_.size()) + " possible paths for arbitrage starting on " + startingCoin_);
+    return stratPaths;
 }
 
 // Evaluate potential arbitrage path profitability
@@ -171,6 +182,7 @@ void CircularArb::run() {
             std::optional<Signal> sig = onMarketData(update);
             if (sig.has_value())
             {
+                LOG_INFO("TRADING ");
 //                broker_.executeOrders(sig->orders);
             }
         } catch (const std::exception& e) {

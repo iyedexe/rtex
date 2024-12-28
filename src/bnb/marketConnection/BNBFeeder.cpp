@@ -16,7 +16,6 @@ BNBFeeder<StreamType>::~BNBFeeder() {
 
 template <typename StreamType>
 void BNBFeeder<StreamType>::start() {
-    LOG_INFO("Feeder starting ...");
     fws_thread_ = std::thread([this]() {
         frunning_= true;
         connect(uri_);

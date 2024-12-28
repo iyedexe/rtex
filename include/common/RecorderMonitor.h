@@ -9,20 +9,15 @@
 #include <memory>
 #include "common/logger.hpp"
 
-class RecorderMonitor {
+class RecorderMonitor: public prometheus::Exposer{
 public:
     RecorderMonitor(const std::string& date);
     ~RecorderMonitor();
-
-    void start();
-    void stop();
 
     void updateMetrics(double runTimeSeconds, double timeUntilStopSeconds, int subscribedInstruments, const std::string& instrument);
     int getUpdatesCount();
 
 private:
-    void metricsThreadFunction();
-
     std::shared_ptr<prometheus::Registry> registry_;
 
     prometheus::Gauge& runTimeGauge_;
@@ -30,7 +25,4 @@ private:
     prometheus::Gauge& subscribedInstrumentsGauge_;
 
     std::unordered_map<std::string, prometheus::Counter*> updatesCounterMap_;
-
-    std::thread metricsThread_;
-    std::atomic<bool> stopMetricsThread_;
 };

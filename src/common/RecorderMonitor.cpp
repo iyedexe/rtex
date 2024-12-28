@@ -2,7 +2,7 @@
 #include <iostream>
 
 RecorderMonitor::RecorderMonitor(const std::string& date) : 
-    stopMetricsThread_(false),
+    prometheus::Exposer{"0.0.0.0:8080"},
     registry_(std::make_shared<prometheus::Registry>()),
     runTimeGauge_(prometheus::BuildGauge()
             .Name("RecorderRunTimeSeconds")
@@ -20,24 +20,9 @@ RecorderMonitor::RecorderMonitor(const std::string& date) :
             .Register(*registry_)
             .Add({}))
 {
-    
+    RegisterCollectable(registry_);
 }
 
-RecorderMonitor::~RecorderMonitor() {
-    stop();
-}
-void RecorderMonitor::start() {
-    LOG_INFO("start");
-    std::cout << "start" << std::endl;
-    metricsThread_ = std::thread(&RecorderMonitor::metricsThreadFunction, this);
-}
-
-void RecorderMonitor::stop() {
-    stopMetricsThread_ = true;
-    if (metricsThread_.joinable()) {
-        metricsThread_.join();
-    }
-}
 
 void RecorderMonitor::updateMetrics(double runTimeSeconds, double timeUntilStopSeconds, int subscribedInstruments, const std::string& instrument) {
 
@@ -63,14 +48,4 @@ int RecorderMonitor::getUpdatesCount()
         updatesCount+= it.second->Value();
     }
     return updatesCount;
-}
-
-void RecorderMonitor::metricsThreadFunction() {
-    LOG_INFO("metricsThreadFunction");
-    prometheus::Exposer exposer{"0.0.0.0:8080"};
-    exposer.RegisterCollectable(registry_);
-
-    while (!stopMetricsThread_) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
 }

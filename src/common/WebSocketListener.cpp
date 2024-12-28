@@ -25,7 +25,6 @@ WebSocketListener::~WebSocketListener() {}
 
 
 void WebSocketListener::connect(const std::string& uri) {
-    LOG_INFO("[WSListener][CONNECT] Connecting WS ...");
     websocketpp::lib::error_code ec;
     con_ = tls_client_.get_connection(uri, ec);
     if (ec) {
@@ -33,23 +32,22 @@ void WebSocketListener::connect(const std::string& uri) {
         return;
     }
     tls_client_.connect(con_);
-    LOG_INFO("[WSListener][CONNECT] TLS Connection established");
+    LOG_INFO("[WSListener][CONNECT] TLS Connection established {}:{}{}", con_->get_host(), con_->get_port() ,con_->get_resource());
 
 }
 
 void WebSocketListener::send(const std::string& message){
     try {
-        LOG_DEBUG("Sending over WS {}", message);
+        LOG_DEBUG("[WSListener][SEND] Sending over WS {}", message);
         tls_client_.send(hdl_, message, websocketpp::frame::opcode::text);
     } catch (const std::exception& e) {
-        LOG_ERROR("Error while writing on WS message :[{}]: {}", message, e.what());
+        LOG_ERROR("[WSListener][SEND] Error while writing on WS message :[{}]: {}", message, e.what());
     }
 }
 
 void WebSocketListener::startClient() {
-    LOG_INFO("WSListener starting ...");
+    LOG_INFO("[WSListener][START_CLIENT] Running client on {}:{}{}", con_->get_host(), con_->get_port() ,con_->get_resource());
     tls_client_.run();
-    LOG_INFO("Run existed ...");
 }
 
 
