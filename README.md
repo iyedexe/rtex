@@ -17,18 +17,21 @@ The circular arbitrage strategy has been implemented, not yet tested nor backtes
 Still missing core components.   
 
 # Next steps.
-[STRATEGY] get market data snapshot on startup
-Symbol filter parse and refactor factory.   
+[SYMBOL] Symbol filter parse and refactor factory.      
+[STRATEGY] round sizes and prices using filters.   
+[STRATEGY] Signal add prices and sizes.   
+[BNBBROKER] Refactor requests hirerachy.   
+[BNBBROKER] Implement ED25519 and RSA auth on message sign for BNB Broker.   
 Generic Istrategy onmarket data handler.   
 Generic Recorder for MDframes.   
 Config file base recorder monitor port and configuration.   
-Implement ED25519 and RSA auth on message sign for BNB Broker.   
 Add into recorder configuration, recording of related symbols to certain coins.     
 Find a method to bypass binance streams limitations.     
 Archive recoding files bz2 and send to a datalake to be queried from a webinterface.   
 Add unit tests.  
 
 # Done.
+[STRATEGY] get market data snapshot on startup
 [BROKER] HMAC message sign for user data and trading
 [STRATEGY] Get account balances and store in circular arb strategy.    
 Refactor scheduler for less functions.   

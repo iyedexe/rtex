@@ -38,6 +38,7 @@ public:
 
     // unsigned
     request getExchangeInfo(const std::vector<std::string>& symbols);
+    request SymbolOrderBookTicker(const std::vector<std::string>& symbols); 
 
 
 private:

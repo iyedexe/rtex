@@ -59,6 +59,23 @@ void CircularArb::initialize() {
         }
         LOG_DEBUG("[STRATEGY] Arbitrage path : {}", pathDescription);
     }
+
+    LOG_INFO("[STRATEGY] Getting book ticker snapshots");
+    requestId = broker_.sendRequest(&BNBRequests::SymbolOrderBookTicker, {relatedSymbols.begin(), relatedSymbols.end()});
+    response = broker_.getResponseForId(requestId);
+
+    const json& data = response["result"];
+    for (const auto& json_data : data) {
+        BookTickerMDFrame dataFrame;
+        dataFrame.symbol = json_data["symbol"].get<std::string>();
+        dataFrame.bestBidPrice = std::stod(json_data["bidPrice"].get<std::string>());
+        dataFrame.bestBidQty = std::stod(json_data["bidQty"].get<std::string>());
+        dataFrame.bestAskPrice = std::stod(json_data["askPrice"].get<std::string>());
+        dataFrame.bestAskQty = std::stod(json_data["askQty"].get<std::string>());
+        marketData_[dataFrame.symbol] = dataFrame;
+        LOG_DEBUG("Starting BookTicker : {}", dataFrame.to_str());
+    }
+
     feeder_.subscribeToTickers({relatedSymbols.begin(), relatedSymbols.end()});
 }
 
@@ -153,12 +170,13 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
     double orderResultingAmount;
     for (const auto& order : path) {
         if (orderStartingAmount == 0) {
-            LOG_WARNING("Available amount for asset {} is null, cannot proceed with path evaluation.", order.getStartingAsset());
+            LOG_DEBUG("Available amount for asset {} is null, cannot proceed with path evaluation.", order.getStartingAsset());
             return std::nullopt;
         }
-        if (~marketData_.contains(order.getSymbol().to_str()))
+
+        if (marketData_.find(order.getSymbol().to_str()) == marketData_.end())
         {
-            LOG_WARNING("Market data still unavailale for {}", order.getSymbol().to_str());
+            LOG_DEBUG("Market data still unavailale for [{}]", order.getSymbol().to_str());
             return std::nullopt;
         }
         const BookTickerMDFrame& marketData = marketData_[order.getSymbol().to_str()];
@@ -188,6 +206,14 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
     }
 
     double pnl = orderResultingAmount - RISK * balance_[pathStartingAsset];
+    if (pnl>0)
+    {
+        return Signal(path, pathDescription, pnl);
+    }
+    else
+    {
+        return std::nullopt;
+    }
     //LOG_INFO("Arbitrage opportunity found: " + signalDesc + "PNL: " + std::to_string(pnl));
 }
 
@@ -216,7 +242,7 @@ void CircularArb::run() {
             std::optional<Signal> sig = onMarketData(update);
             if (sig.has_value())
             {
-                LOG_INFO("Detected a trading signal, theo PNL : {}", sig->pnl);
+                LOG_INFO("Detected a trading signal, theo PNL : {}, description : {}", sig->pnl, sig->description);
 //                broker_.executeOrders(sig->orders);
             }
         } catch (const std::exception& e) {

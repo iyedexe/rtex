@@ -41,6 +41,24 @@ request BNBRequests::querySessionStatus() {
     return std::make_pair(requestId, statusRequest.dump());
 }
 
+request BNBRequests::SymbolOrderBookTicker(const std::vector<std::string>& symbols) {
+    // Get the current best price and quantity on the order book.
+    std::string requestId = generateRequestId();
+
+    nlohmann::json params = nlohmann::json::object();
+    if (!symbols.empty()) {
+        params["symbols"] = symbols;
+    }
+    nlohmann::json request = {
+        {"id", requestId},
+        {"method", "ticker.book"},
+        {"params", params}  // This will be either an empty object or contain the symbols field
+    };
+    return std::make_pair(requestId, request.dump());
+}
+
+
+
 request BNBRequests::logOut() {
     std::string requestId = generateRequestId();
     nlohmann::json logOutRequest = {
