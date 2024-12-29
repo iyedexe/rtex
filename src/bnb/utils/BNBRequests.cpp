@@ -55,7 +55,8 @@ request BNBRequests::getAccountInformation() {
     std::string requestId = generateRequestId();
     auto timestamp = getTimestamp();
     std::map<std::string, std::string> params{
-            {"timestamp", timestamp}
+            {"timestamp", timestamp},
+            {"omitZeroBalances", "true"}
     };
     if(!loggedIn_)
     {
@@ -153,16 +154,16 @@ std::string generatePayload(const std::map<std::string, std::string>& params) {
     for (const auto& param : params) {
         param_list.push_back(fmt::format("{}={}", param.first, param.second));
     }    
-    std::sort(param_list.begin(), param_list.end());
     return fmt::format("{}", fmt::join(param_list, "&"));
 }
 
 
 void BNBRequests::signRequestHMAC(std::map<std::string, std::string>& params) {
+    // https://developers.binance.com/docs/binance-spot-api-docs/web-socket-api/public-websocket-api-for-binance#signed-request-example-hmac    
+    params.insert({"apiKey", apiKey_});
     std::string payload = generatePayload(params);
     std::string signature = generateHMACSignature(secretKey_, payload);
     params.insert({"signature", signature});
-    params.insert({"apiKey", apiKey_});
     return;
 }
 

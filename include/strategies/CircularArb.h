@@ -26,7 +26,7 @@ const double FEE = 0.1;
 const double RISK = 1.0;
 
 struct CircularArbConfig {
-    std::string startingCoin;
+    std::string startingAsset;
 };
 
 class CircularArb : public IStrategy {
@@ -42,7 +42,7 @@ public:
     static CircularArbConfig loadConfig(const std::string& configFile);
     
 private:
-    std::string startingCoin_;
+    std::string startingAsset_;
     std::vector<std::vector<Order>> stratPaths_;
     std::set<std::string> stratSymbols_;
     std::map<std::string, BookTickerMDFrame> marketData_;
@@ -52,6 +52,6 @@ private:
     BNBFeeder<BookTickerMDFrame> feeder_;
 
     std::vector<Order> getPossibleOrders(const std::string& coin, const std::vector<Symbol>& relatedSymbols);
-    std::vector<std::vector<Order>> computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingCoin, int arbitrageDepth);
+    std::vector<std::vector<Order>> computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingAsset, int arbitrageDepth);
     std::optional<Signal> evaluatePath(const std::vector<Order>& path);
 };

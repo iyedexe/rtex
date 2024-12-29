@@ -55,12 +55,12 @@ int main(int argc, char* argv[]) {
         strategy = std::make_unique<CircularArb>(config, mcConfig);
     }
 
-    try {
-        strategy->run();
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
+    // try {
+    //     strategy->run();
+    // } catch (const std::exception& e) {
+    //     std::cerr << "Error: " << e.what() << std::endl;
+    //     return 1;
+    // }
 
     return 0;
 }

@@ -8,12 +8,12 @@
 #include "common/logger.hpp"
 
 CircularArb::CircularArb(const CircularArbConfig& config, const BNBMarketConnectionConfig& mcConfig)
-    : startingCoin_(config.startingCoin), broker_(mcConfig), feeder_(mcConfig){
+    : startingAsset_(config.startingAsset), broker_(mcConfig), feeder_(mcConfig){
     initialize();
 } 
 
 void CircularArb::initialize() {
-    LOG_INFO("[STRATEGY] CircularArb initialized with starting coin: {}", startingCoin_);
+    LOG_INFO("[STRATEGY] CircularArb initialized with starting coin: {}", startingAsset_);
 
     broker_.start();
     feeder_.start();
@@ -22,10 +22,24 @@ void CircularArb::initialize() {
     std::string requestId = broker_.sendRequest(&BNBRequests::getExchangeInfo, {});
     nlohmann::json response = broker_.getResponseForId(requestId);
     auto exInfo = ExchangeInfo(response);
+    
+    LOG_INFO("[STRATEGY] Getting account infromation");
+    requestId = broker_.sendRequest(&BNBRequests::getAccountInformation);
+    response = broker_.getResponseForId(requestId);
+
+    const json& balances = response["result"]["balances"];
+    for (const auto& balance : balances) {
+        LOG_INFO(
+            "Balance: {}, free: {}, locked: {}", 
+            balance["asset"].get<std::string>(),
+            balance["free"].get<std::string>(),
+            balance["locked"].get<std::string>()
+        );
+    }
+
 
     std::vector<Symbol> symbolsList = exInfo.getSymbols();
-    stratPaths_ = computeArbitragePaths(symbolsList, startingCoin_, 3);
-    LOG_INFO("Number of arb paths : {}", stratPaths_.size());
+    stratPaths_ = computeArbitragePaths(symbolsList, startingAsset_, 3);
 
     std::set<std::string> relatedSymbols;
     for (auto path: stratPaths_)
@@ -36,7 +50,7 @@ void CircularArb::initialize() {
             relatedSymbols.insert(order.getSymbol().getSymbol());
             pathDescription += order.to_str() + " ";
         }
-        LOG_INFO("Arbitrage path : {}", pathDescription);
+        LOG_DEBUG("[STRATEGY] Arbitrage path : {}", pathDescription);
     }
     feeder_.subscribeToTickers({relatedSymbols.begin(), relatedSymbols.end()});
 }
@@ -54,7 +68,7 @@ CircularArbConfig CircularArb::loadConfig(const std::string& configFile){
     try {
         boost::property_tree::ini_parser::read_ini(configFile, pt);
 
-        config.startingCoin = pt.get<std::string>("CIRCULAR_ARB_STRATEGY.startingCoin");
+        config.startingAsset = pt.get<std::string>("CIRCULAR_ARB_STRATEGY.startingAsset");
     } catch (const boost::property_tree::ini_parser_error& e) {
         throw std::runtime_error("Failed to load config file: " + std::string(e.what()));
     } catch (const boost::property_tree::ptree_bad_path& e) {
@@ -78,10 +92,10 @@ std::vector<Order> CircularArb::getPossibleOrders(const std::string& coin, const
 }
 
 // Compute all potential triangular arbitrage paths
-std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingCoin, int arbitrageDepth) {
-    LOG_INFO("Computing arbitrage paths...");
+std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingAsset, int arbitrageDepth) {
+    LOG_INFO("[STRATEGY] Computing arbitrage paths...");
     std::vector<std::vector<Order>> stratPaths; 
-    auto firstOrders = getPossibleOrders(startingCoin, symbolsList);
+    auto firstOrders = getPossibleOrders(startingAsset, symbolsList);
     for (const auto& order : firstOrders) {
         stratPaths.push_back({order});
     }
@@ -100,7 +114,7 @@ std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::ve
             std::vector<Order> possibleNextOrders = getPossibleOrders(resultingCoin, unusedSymbols);
             for (const auto& nextOrder : possibleNextOrders) {
                 std::string resultingCoin = (nextOrder.getWay() == Way::SELL) ? nextOrder.getSymbol().getQuote() : nextOrder.getSymbol().getBase();
-                if ((i==arbitrageDepth-2) & (resultingCoin != startingCoin_))
+                if ((i==arbitrageDepth-2) & (resultingCoin != startingAsset))
                 {
                     continue;
                 }
@@ -111,16 +125,17 @@ std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::ve
         }
         stratPaths = paths;
     }
+    LOG_INFO("[STRATEGY] Number of arbitrage paths : {} of depth {}, starting from asset {}", stratPaths.size(), arbitrageDepth, startingAsset);
     return stratPaths;
 }
 
 // Evaluate potential arbitrage path profitability
 std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) {
     Order firstOrder = path[0];
-    std::string pathStartingCoin = firstOrder.getWay() == Way::BUY ? firstOrder.getSymbol().getQuote() : firstOrder.getSymbol().getBase();
+    std::string pathStartingAsset = (firstOrder.getWay() == Way::BUY) ? firstOrder.getSymbol().getQuote() : firstOrder.getSymbol().getBase();
     std::string signalDesc;
 
-    double orderStartingAmount = RISK * balance_[pathStartingCoin];
+    double orderStartingAmount = RISK * balance_[pathStartingAsset];
     double orderResultingAmount;
     for (const auto& order : path) {
         if (orderStartingAmount == 0) {
@@ -153,7 +168,7 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
         //signalDesc += "symbol=[" + order.getSymbol() + "], way=[" + std::to_string(order.getWay()) + "], price=[" + std::to_string(price) + "]; ";
     }
 
-    double pnl = orderResultingAmount - RISK * balance_[pathStartingCoin];
+    double pnl = orderResultingAmount - RISK * balance_[pathStartingAsset];
     //LOG_INFO("Arbitrage opportunity found: " + signalDesc + "PNL: " + std::to_string(pnl));
 }
 
@@ -182,7 +197,7 @@ void CircularArb::run() {
             std::optional<Signal> sig = onMarketData(update);
             if (sig.has_value())
             {
-                LOG_INFO("TRADING ");
+                LOG_INFO("Detected a trading signal, theo PNL : {}", sig->pnl);
 //                broker_.executeOrders(sig->orders);
             }
         } catch (const std::exception& e) {
