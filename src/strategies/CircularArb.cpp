@@ -1,11 +1,12 @@
 #include "strategies/CircularArb.h"
-
+#include <numeric>
 #include <algorithm>
 #include <iostream>
 #include <chrono>
 #include <numeric>
-
+#include <charconv>
 #include "common/logger.hpp"
+#include <ranges>
 
 CircularArb::CircularArb(const CircularArbConfig& config, const BNBMarketConnectionConfig& mcConfig)
     : startingAsset_(config.startingAsset), broker_(mcConfig), feeder_(mcConfig){
@@ -29,12 +30,18 @@ void CircularArb::initialize() {
 
     const json& balances = response["result"]["balances"];
     for (const auto& balance : balances) {
-        LOG_INFO(
-            "Balance: {}, free: {}, locked: {}", 
-            balance["asset"].get<std::string>(),
-            balance["free"].get<std::string>(),
-            balance["locked"].get<std::string>()
-        );
+
+        double val=0;
+        std::string input = balance["free"].get<std::string>();
+        auto [ptr, ec] = std::from_chars(input.data(), input.data() + input.size(), val);
+
+        if (ec == std::errc::invalid_argument) {
+            LOG_ERROR("Invalid argument on balance coversion from str to double {}", input);
+        } else if (ec == std::errc::result_out_of_range) {
+            LOG_ERROR("Out of range on balance coversion from str to double {}", input);
+        }
+        std::string asset = balance["asset"].get<std::string>();
+        balance_[asset] = val;
     }
 
 
@@ -132,14 +139,26 @@ std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::ve
 // Evaluate potential arbitrage path profitability
 std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) {
     Order firstOrder = path[0];
-    std::string pathStartingAsset = (firstOrder.getWay() == Way::BUY) ? firstOrder.getSymbol().getQuote() : firstOrder.getSymbol().getBase();
+    std::string pathStartingAsset = firstOrder.getStartingAsset();
     std::string signalDesc;
+    std::string pathDescription = std::accumulate(
+        path.begin(), 
+        path.end(),
+        std::string(),
+        [](const std::string& acc, const Order& ord) { return acc.empty() ? ord.to_str() : acc + " " + ord.to_str(); });
 
+    // LOG_DEBUG("Evaluating path : {}", pathDescription);
     double orderStartingAmount = RISK * balance_[pathStartingAsset];
+
     double orderResultingAmount;
     for (const auto& order : path) {
         if (orderStartingAmount == 0) {
-            LOG_ERROR("Available amount is zero, cannot proceed with path evaluation");
+            LOG_WARNING("Available amount for asset {} is null, cannot proceed with path evaluation.", order.getStartingAsset());
+            return std::nullopt;
+        }
+        if (~marketData_.contains(order.getSymbol().to_str()))
+        {
+            LOG_WARNING("Market data still unavailale for {}", order.getSymbol().to_str());
             return std::nullopt;
         }
         const BookTickerMDFrame& marketData = marketData_[order.getSymbol().to_str()];
@@ -161,8 +180,8 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
         orderResultingAmount *= (1 - FEE / 100);
         
         // round using tick size
-        orderResultingAmount = order.getSymbol().getFilter().roundPrice(orderResultingAmount);
-        
+        // orderResultingAmount = order.getSymbol().getFilter().roundPrice(orderResultingAmount);
+        LOG_DEBUG("Performing {}, giving {} {}, getting {} {}", order.to_str(), orderStartingAmount, order.getStartingAsset(), orderResultingAmount, order.getResultingAsset());
         orderStartingAmount = orderResultingAmount;
 
         //signalDesc += "symbol=[" + order.getSymbol() + "], way=[" + std::to_string(order.getWay()) + "], price=[" + std::to_string(price) + "]; ";

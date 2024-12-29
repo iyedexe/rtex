@@ -17,7 +17,7 @@ The circular arbitrage strategy has been implemented, not yet tested nor backtes
 Still missing core components.   
 
 # Next steps.
-Get account balances and store in circular arb strategy.    
+[STRATEGY] get market data snapshot on startup
 Symbol filter parse and refactor factory.   
 Generic Istrategy onmarket data handler.   
 Generic Recorder for MDframes.   
@@ -29,6 +29,8 @@ Archive recoding files bz2 and send to a datalake to be queried from a webinterf
 Add unit tests.  
 
 # Done.
+[BROKER] HMAC message sign for user data and trading
+[STRATEGY] Get account balances and store in circular arb strategy.    
 Refactor scheduler for less functions.   
 Refactor BNB Broker to pass methods for calls to API.    
 Investigate crashes at recorder (feeder) after a few hours run and add retry protocol.  

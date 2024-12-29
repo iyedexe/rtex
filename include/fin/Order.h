@@ -37,8 +37,8 @@ public:
     double getPrice() const { return _price; }
     void setPrice(double value) { _price = value; }
 
-    std::string getStartingAsset() { return (_way == Way::SELL) ? _symbol.getQuote() : _symbol.getBase();}
-    std::string getResultingAsset() { return (_way == Way::SELL) ? _symbol.getBase() : _symbol.getQuote();}
+    std::string getStartingAsset() const { return (_way == Way::BUY) ? _symbol.getQuote() : _symbol.getBase();}
+    std::string getResultingAsset() const { return (_way == Way::BUY) ? _symbol.getBase() : _symbol.getQuote();}
 
     std::string to_str() const {
         std::string wayStr= (static_cast<int>(_way)==0) ? "BUY" : "SELL";
