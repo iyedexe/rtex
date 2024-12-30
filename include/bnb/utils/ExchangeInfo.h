@@ -9,19 +9,14 @@
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <iostream>
+#include <unordered_map>
 using json = nlohmann::json;
-
-struct SymbolJson {
-    std::string name;
-    std::string status;
-    std::string baseAsset;
-    std::string quoteAsset;
-    std::vector<std::map<std::string, std::string>> filters;
-};
 
 class ExchangeInfo {
 private:
-    std::vector<SymbolJson> symbols_;
+    std::vector<Symbol> symbols_;
+
+    SymbolFilter createSymbolFilter(const json& filterJson) const;
 
 public:
     explicit ExchangeInfo(const nlohmann::json& jsonData);
@@ -29,5 +24,4 @@ public:
     std::vector<Symbol> getSymbols() const;
     std::vector<Symbol> getRelatedSymbols(std::string asset) const;
 
-    SymbolFilter createSymbolFilter(const std::string& symbolName) const;
 };

@@ -53,5 +53,5 @@ private:
 
     std::vector<Order> getPossibleOrders(const std::string& coin, const std::vector<Symbol>& relatedSymbols);
     std::vector<std::vector<Order>> computeArbitragePaths(const std::vector<Symbol>& symbolsList, const std::string& startingAsset, int arbitrageDepth);
-    std::optional<Signal> evaluatePath(const std::vector<Order>& path);
+    std::optional<Signal> evaluatePath(std::vector<Order>& path);
 };

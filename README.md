@@ -17,9 +17,7 @@ The circular arbitrage strategy has been implemented, not yet tested nor backtes
 Still missing core components.   
 
 # Next steps.
-[SYMBOL] Symbol filter parse and refactor factory.      
-[STRATEGY] round sizes and prices using filters.   
-[STRATEGY] Signal add prices and sizes.   
+[BNBBROKER] Add place order.   
 [BNBBROKER] Refactor requests hirerachy.   
 [BNBBROKER] Implement ED25519 and RSA auth on message sign for BNB Broker.   
 Generic Istrategy onmarket data handler.   
@@ -34,6 +32,9 @@ Add unit tests.
 [STRATEGY] get market data snapshot on startup
 [BROKER] HMAC message sign for user data and trading
 [STRATEGY] Get account balances and store in circular arb strategy.    
+[SYMBOL] Symbol filter parse and refactor factory.      
+[STRATEGY] round sizes and prices using filters.   
+[STRATEGY] Signal add prices and sizes.   
 Refactor scheduler for less functions.   
 Refactor BNB Broker to pass methods for calls to API.    
 Investigate crashes at recorder (feeder) after a few hours run and add retry protocol.  
@@ -155,6 +156,9 @@ https://developers.binance.com/docs/binance-spot-api-docs/web-socket-api.
 ```
 
 # Issues 
+
+https://gcc.gnu.org/onlinedocs/gcc-14.2.0/gcc/C_002b_002b-Dialect-Options.html#index-Wno-template-id-cdtor
+
 GCC=14
 BAZEL=5.4
 

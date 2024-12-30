@@ -4,6 +4,10 @@ project(RTEX)
 set(CMAKE_CXX_STANDARD 20)
 set(JSON_ImplicitConversions OFF)
 
+
+SET(C20_WARNING_TEMPLATE_CDTOR_MUTE "-Wno-template-id-cdtor")
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${C20_WARNING_TEMPLATE_CDTOR_MUTE}")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(external/json)

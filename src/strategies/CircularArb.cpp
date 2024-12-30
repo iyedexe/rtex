@@ -19,11 +19,14 @@ void CircularArb::initialize() {
     broker_.start();
     feeder_.start();
 
-    LOG_INFO("[STRATEGY] Waiting for exchange info response...");
+    LOG_INFO("[STRATEGY] Getting exchange information");
     std::string requestId = broker_.sendRequest(&BNBRequests::getExchangeInfo, {});
     nlohmann::json response = broker_.getResponseForId(requestId);
     auto exInfo = ExchangeInfo(response);
-    
+
+    std::vector<Symbol> symbolsList = exInfo.getSymbols();
+    stratPaths_ = computeArbitragePaths(symbolsList, startingAsset_, 3);
+
     LOG_INFO("[STRATEGY] Getting account infromation");
     requestId = broker_.sendRequest(&BNBRequests::getAccountInformation);
     response = broker_.getResponseForId(requestId);
@@ -44,10 +47,7 @@ void CircularArb::initialize() {
         balance_[asset] = val;
     }
 
-
-    std::vector<Symbol> symbolsList = exInfo.getSymbols();
-    stratPaths_ = computeArbitragePaths(symbolsList, startingAsset_, 3);
-
+    LOG_INFO("[STRATEGY] Initializing market data");
     std::set<std::string> relatedSymbols;
     for (auto path: stratPaths_)
     {
@@ -60,7 +60,6 @@ void CircularArb::initialize() {
         LOG_DEBUG("[STRATEGY] Arbitrage path : {}", pathDescription);
     }
 
-    LOG_INFO("[STRATEGY] Getting book ticker snapshots");
     requestId = broker_.sendRequest(&BNBRequests::SymbolOrderBookTicker, {relatedSymbols.begin(), relatedSymbols.end()});
     response = broker_.getResponseForId(requestId);
 
@@ -154,7 +153,7 @@ std::vector<std::vector<Order>> CircularArb::computeArbitragePaths(const std::ve
 }
 
 // Evaluate potential arbitrage path profitability
-std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) {
+std::optional<Signal> CircularArb::evaluatePath(std::vector<Order>& path) {
     Order firstOrder = path[0];
     std::string pathStartingAsset = firstOrder.getStartingAsset();
     std::string signalDesc;
@@ -164,13 +163,17 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
         std::string(),
         [](const std::string& acc, const Order& ord) { return acc.empty() ? ord.to_str() : acc + " " + ord.to_str(); });
 
-    // LOG_DEBUG("Evaluating path : {}", pathDescription);
-    double orderStartingAmount = RISK * balance_[pathStartingAsset];
+    LOG_DEBUG("Evaluating path : {}", pathDescription);
 
-    double orderResultingAmount;
-    for (const auto& order : path) {
-        if (orderStartingAmount == 0) {
-            LOG_DEBUG("Available amount for asset {} is null, cannot proceed with path evaluation.", order.getStartingAsset());
+    // Asset quantities
+    double startingAssetQty = 0;
+    double resultingAssetQty = RISK * balance_[pathStartingAsset];
+
+    for (auto& order : path) {
+        startingAssetQty = resultingAssetQty;
+
+        if (startingAssetQty == 0) {
+            LOG_DEBUG("starting asset qty for {} is null, cannot proceed with path evaluation.", order.getStartingAsset());
             return std::nullopt;
         }
 
@@ -179,33 +182,45 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
             LOG_DEBUG("Market data still unavailale for [{}]", order.getSymbol().to_str());
             return std::nullopt;
         }
+
+        // base asset refers to the asset that is the quantity of a symbol.
+        // quote asset refers to the asset that is the price of a symbol.
+        // For the symbol XRPUSDC, USDC would be the quote asset.
+        // For the symbol XRPUSDC, XRP would be the base asset.
+
         const BookTickerMDFrame& marketData = marketData_[order.getSymbol().to_str()];
-        // buy or sell the base
+
+        double orderPrice=0;
+        double orderQty=0;
+
         if (order.getWay() == Way::SELL)
         {
             // sell to the bid 
-            // bid is how much quote to get for selling 1 base
-            orderResultingAmount = orderStartingAmount * marketData.bestBidPrice;
+            orderQty = order.getSymbol().getFilter().roundQty(startingAssetQty);
+            resultingAssetQty = orderQty * marketData.bestBidPrice;
+            orderPrice=marketData.bestBidPrice;
         }
         if (order.getWay() == Way::BUY)
         {
             // buy from the ask 
-            // ask is how much quote to spend to get 1 base
-            orderResultingAmount = orderStartingAmount / marketData.bestAskPrice;
+            orderQty = order.getSymbol().getFilter().roundQty(startingAssetQty/ marketData.bestAskPrice);
+            resultingAssetQty = orderQty;
+            orderPrice= marketData.bestAskPrice;
         }
 
-        //apply fee
-        orderResultingAmount *= (1 - FEE / 100);
-        
-        // round using tick size
-        // orderResultingAmount = order.getSymbol().getFilter().roundPrice(orderResultingAmount);
-        LOG_DEBUG("Performing {}, giving {} {}, getting {} {}", order.to_str(), orderStartingAmount, order.getStartingAsset(), orderResultingAmount, order.getResultingAsset());
-        orderStartingAmount = orderResultingAmount;
+        LOG_DEBUG("Transaction : {} {} -> {} {}", startingAssetQty, order.getStartingAsset(), resultingAssetQty, order.getResultingAsset());
 
-        //signalDesc += "symbol=[" + order.getSymbol() + "], way=[" + std::to_string(order.getWay()) + "], price=[" + std::to_string(price) + "]; ";
+        order.setPrice(orderPrice);
+        order.setQty(orderQty);
+        order.setType(OrderType::MARKET);
+
+        //apply fee
+        resultingAssetQty *= (1 - FEE / 100);
+        LOG_DEBUG("Amound after fees {}", resultingAssetQty);
+
     }
 
-    double pnl = orderResultingAmount - RISK * balance_[pathStartingAsset];
+    double pnl = resultingAssetQty - RISK * balance_[pathStartingAsset];
     if (pnl>0)
     {
         return Signal(path, pathDescription, pnl);
@@ -214,7 +229,6 @@ std::optional<Signal> CircularArb::evaluatePath(const std::vector<Order>& path) 
     {
         return std::nullopt;
     }
-    //LOG_INFO("Arbitrage opportunity found: " + signalDesc + "PNL: " + std::to_string(pnl));
 }
 
 // Handle incoming market data
@@ -222,7 +236,7 @@ std::optional<Signal> CircularArb::onMarketData(const BookTickerMDFrame& data) {
     marketData_[data.symbol] = data;
     double maxPnl=0;
     std::optional<Signal> outSignal;
-    for (const auto& path : stratPaths_) {
+    for (auto& path : stratPaths_) {
         if (std::any_of(path.begin(), path.end(), [&data](const Order& order) { return order.getSymbol().to_str() == data.symbol; })) {
             std::optional<Signal> sig = evaluatePath(path);
             if ((sig.has_value()) && (sig->pnl > maxPnl))
@@ -244,6 +258,10 @@ void CircularArb::run() {
             {
                 LOG_INFO("Detected a trading signal, theo PNL : {}, description : {}", sig->pnl, sig->description);
 //                broker_.executeOrders(sig->orders);
+                if (sig->pnl > 10)
+                {
+                    return;
+                }
             }
         } catch (const std::exception& e) {
             LOG_ERROR("Error in Circular Arb loop: {}", e.what());
