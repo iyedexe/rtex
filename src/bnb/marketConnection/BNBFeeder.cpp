@@ -160,7 +160,7 @@ int BNBFeeder<StreamType>::subscribeToTickers(const std::vector<std::string>& sy
         request["id"] = request_id;
 
         std::string request_str = request.dump();
-        send(request_str);
+        writeWS(request_str);
         pending_requests_.insert(request_id);
 
 //        LOG_INFO("Subscription request sent for symbols (chunk {} - {}): {} with request ID: {}",

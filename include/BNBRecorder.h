@@ -4,7 +4,7 @@
 #include "bnb/marketConnection/BNBFeeder.h"
 #include "bnb/marketConnection/BNBMarketConnectionConfig.h"
 #include "common/Scheduler.h"
-#include "bnb/utils/BNBRequests.h"
+#include "bnb/utils/IBNBRequests.h"
 #include "common/RecorderMonitor.h"
 
 #include <string>

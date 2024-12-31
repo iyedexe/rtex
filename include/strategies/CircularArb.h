@@ -7,6 +7,14 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <stdexcept>
+#include <numeric>
+#include <algorithm>
+#include <iostream>
+#include <chrono>
+#include <numeric>
+#include <charconv>
+#include "common/logger.hpp"
+#include <ranges>
 
 #include "IStrategy.h"
 #include "bnb/marketData/BookTickerMDFrame.h"
@@ -19,7 +27,10 @@
 #include "bnb/marketConnection/BNBFeeder.h"
 #include "bnb/marketConnection/BNBMarketConnectionConfig.h"
 
-#include "bnb/utils/BNBRequests.h"
+#include "bnb/utils/BNBRequests/General.h"
+#include "bnb/utils/BNBRequests/Account.h"
+#include "bnb/utils/BNBRequests/MarketData.h"
+#include "bnb/utils/BNBRequests/Trading.h"
 #include "bnb/utils/ExchangeInfo.h"
 
 const double FEE = 0.1;

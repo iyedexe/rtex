@@ -18,7 +18,7 @@ public:
     void connect(const std::string& uri);
     void startClient();
     void stopClient();
-    void send(const std::string& message);
+    void writeWS(const std::string& message);
 
 protected:
     virtual void onOpen(websocketpp::connection_hdl hdl);

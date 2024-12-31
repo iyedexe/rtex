@@ -24,13 +24,12 @@ include_directories(external/quill)
 include_directories(external/fmt)
 include_directories(external/prometheus)
 
+file(GLOB_RECURSE BNBCLIENTSOURCES "src/bnb/*.cpp")
+
 set(COMMON_SOURCES
+    ${BNBCLIENTSOURCES}
     src/common/WebSocketListener.cpp
-    src/bnb/marketConnection/BNBMarketConnectionConfig.cpp
-    src/bnb/marketConnection/BNBFeeder.cpp
-    src/bnb/marketConnection/BNBBroker.cpp
     src/common/Scheduler.cpp
-    src/bnb/utils/BNBRequests.cpp
 )
 
 set(RECORDER_SOURCES

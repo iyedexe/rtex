@@ -36,7 +36,7 @@ void WebSocketListener::connect(const std::string& uri) {
 
 }
 
-void WebSocketListener::send(const std::string& message){
+void WebSocketListener::writeWS(const std::string& message){
     try {
         LOG_DEBUG("[WSListener][SEND] Sending over WS {}", message);
         tls_client_.send(hdl_, message, websocketpp::frame::opcode::text);

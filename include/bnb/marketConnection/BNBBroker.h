@@ -1,9 +1,5 @@
 #pragma once
-#include "common/WebSocketListener.h"
-#include "bnb/utils/BNBRequests.h"
-#include "common/logger.hpp"
-#include "fin/Order.h"
-#include "bnb/marketConnection/BNBMarketConnectionConfig.h"
+
 #include <nlohmann/json.hpp>
 #include <map>
 #include <string>
@@ -15,17 +11,18 @@
 #include <condition_variable>
 #include <vector>
 #include <set>
-#include <type_traits> 
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <stdexcept>
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <fstream>
 #include <sstream>
+
+#include "common/WebSocketListener.h"
+#include "bnb/utils/BNBRequests/Authentication.h"
+#include "common/logger.hpp"
+#include "fin/Order.h"
+#include "bnb/marketConnection/BNBMarketConnectionConfig.h"
+#include "bnb/utils/BNBRequests/RequestsBuilder.h"
 
 class BNBBroker : public WebSocketListener {
 public:
@@ -35,32 +32,7 @@ public:
     void start();
     void stop();
 
-    template<typename T, typename... Args>
-    std::string sendRequest(request (T::*func)(Args...), Args&&... args)
-    {
-        LOG_INFO("[BNBBroker] Sending request");
-        // Wait until connected
-        {
-            std::unique_lock<std::mutex> lock(connection_mutex_);
-            connection_cv_.wait(lock, [this] { return is_connected_; });
-        }
-        if (loginOnConnection_ && !(std::is_same<decltype(func), decltype(&BNBRequests::logIn)>::value))
-        {
-            LOG_INFO("[BNBBroker] Waiting for login");
-            std::unique_lock<std::mutex> lock(login_mutex_);
-            login_cv_.wait(lock, [this] { return is_logged_in_; });
-        }
-
-        request req = ((*requests_).*func)(std::forward<Args>(args)...);
-        {
-            std::lock_guard<std::mutex> lock(response_mutex_);
-            pending_requests_.insert(req.first);
-        }
-
-        send(req.second);
-        LOG_INFO("[BNBBroker] Request sent, ID: {}", req.first);
-        return req.first;
-    }
+    std::string sendRequest(const std::string& requestId, const std::string& requestBody);
     nlohmann::json getResponseForId(const std::string& id);
 
 protected:
@@ -88,6 +60,4 @@ private:
 
     std::thread bws_thread_;
     std::atomic<bool> brunning_ = true;
-
-    std::unique_ptr<BNBRequests> requests_;
 };

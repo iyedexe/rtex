@@ -4,8 +4,11 @@
 ExchangeInfo::ExchangeInfo(const json& jsonData) {
     try
     {
+        LOG_DEBUG("Building exchange info from market JSON");
         const json& symbolsJson = jsonData["result"]["symbols"];
         for (const auto& symbolJson : symbolsJson) {
+            // LOG_DEBUG("Parsing symbol {}", symbolJson["symbol"].get<std::string>());
+
             if (symbolJson["status"].get<std::string>() != "TRADING")
             {
                 continue;
@@ -50,7 +53,7 @@ SymbolFilter ExchangeInfo::createSymbolFilter(const json& filterJson) const {
     MaxPositionFilter mpf = {0};
 
     for (const auto& filter : filterJson) {
-        LOG_DEBUG("Parsing filter {}, {}", filter["filterType"].get<std::string>(), filter.dump());
+        // LOG_DEBUG("Parsing filter {}, {}", filter["filterType"].get<std::string>(), filter.dump());
         if (filter["filterType"].get<std::string>() == "PRICE_FILTER") {
             pf.maxPrice = std::stod(filter["maxPrice"].get<std::string>());
             pf.minPrice = std::stod(filter["minPrice"].get<std::string>());

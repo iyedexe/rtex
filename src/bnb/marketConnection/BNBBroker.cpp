@@ -19,8 +19,7 @@ BNBBroker::BNBBroker(const BNBMarketConnectionConfig& config):
     {
         throw std::runtime_error("[BNBBroker] Binance API sign method unsupported : <"+signMethod_+">.");
     }
-    requests_ = std::make_unique<BNBRequests>(config.apiKey, secretKey_);
-
+    RequestsBuilder::getInstance(apiKey_, secretKey_);
     LOG_INFO("[BNBBroker] BNBBroker initialized with API Endpoint: {}, sign method used : {}", uri_, signMethod_);
 }
 
@@ -42,7 +41,8 @@ void BNBBroker::start() {
         {
             throw std::runtime_error("[BNBBroker] Unsupported login on connection with sign method : " + signMethod_);
         }
-        loginRequestId_ = sendRequest(&BNBRequests::logIn);
+        auto req = BNBRequests::Authentication::logIn();
+        loginRequestId_ = sendRequest(req.first, req.second);
     }
 }
 
@@ -56,6 +56,31 @@ void BNBBroker::stop() {
             LOG_INFO("[BNBBroker] WebSocket connection thread joined.");
         }
     }
+}
+
+std::string BNBBroker::sendRequest(const std::string& requestId, const std::string& requestBody)
+{
+    LOG_INFO("[BNBBroker] Sending request");
+    {
+        // Wait until connected
+        std::unique_lock<std::mutex> lock(connection_mutex_);
+        connection_cv_.wait(lock, [this] { return is_connected_; });
+    }
+    // if (loginOnConnection_ && !(std::is_same<decltype(func), decltype(&BNBRequests::logIn)>::value))
+    // {
+    //     LOG_INFO("[BNBBroker] Waiting for login");
+    //     std::unique_lock<std::mutex> lock(login_mutex_);
+    //     login_cv_.wait(lock, [this] { return is_logged_in_; });
+    // }
+
+    {
+        std::lock_guard<std::mutex> lock(response_mutex_);
+        pending_requests_.insert(requestId);
+    }
+
+    writeWS(requestBody);
+    LOG_INFO("[BNBBroker] Request sent, ID: {}", requestId);
+    return requestId;
 }
 
 nlohmann::json BNBBroker::getResponseForId(const std::string& id) {

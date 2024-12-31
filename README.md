@@ -18,7 +18,6 @@ Still missing core components.
 
 # Next steps.
 [BNBBROKER] Add place order.   
-[BNBBROKER] Refactor requests hirerachy.   
 [BNBBROKER] Implement ED25519 and RSA auth on message sign for BNB Broker.   
 Generic Istrategy onmarket data handler.   
 Generic Recorder for MDframes.   
@@ -29,6 +28,7 @@ Archive recoding files bz2 and send to a datalake to be queried from a webinterf
 Add unit tests.  
 
 # Done.
+[BNBBROKER] Refactor requests hirerachy.   
 [STRATEGY] get market data snapshot on startup
 [BROKER] HMAC message sign for user data and trading
 [STRATEGY] Get account balances and store in circular arb strategy.    

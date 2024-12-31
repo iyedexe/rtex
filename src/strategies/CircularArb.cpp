@@ -1,12 +1,4 @@
 #include "strategies/CircularArb.h"
-#include <numeric>
-#include <algorithm>
-#include <iostream>
-#include <chrono>
-#include <numeric>
-#include <charconv>
-#include "common/logger.hpp"
-#include <ranges>
 
 CircularArb::CircularArb(const CircularArbConfig& config, const BNBMarketConnectionConfig& mcConfig)
     : startingAsset_(config.startingAsset), broker_(mcConfig), feeder_(mcConfig){
@@ -20,15 +12,19 @@ void CircularArb::initialize() {
     feeder_.start();
 
     LOG_INFO("[STRATEGY] Getting exchange information");
-    std::string requestId = broker_.sendRequest(&BNBRequests::getExchangeInfo, {});
+
+    request req = BNBRequests::General::exchangeInformation({});
+    std::string requestId = broker_.sendRequest(req.first, req.second);
     nlohmann::json response = broker_.getResponseForId(requestId);
+
     auto exInfo = ExchangeInfo(response);
 
     std::vector<Symbol> symbolsList = exInfo.getSymbols();
     stratPaths_ = computeArbitragePaths(symbolsList, startingAsset_, 3);
 
     LOG_INFO("[STRATEGY] Getting account infromation");
-    requestId = broker_.sendRequest(&BNBRequests::getAccountInformation);
+    req = BNBRequests::Account::information();
+    requestId = broker_.sendRequest(req.first, req.second);
     response = broker_.getResponseForId(requestId);
 
     const json& balances = response["result"]["balances"];
@@ -54,13 +50,14 @@ void CircularArb::initialize() {
         std::string pathDescription;
         for (auto order: path)
         {
-            relatedSymbols.insert(order.getSymbol().getSymbol());
+            relatedSymbols.insert(order.getSymbol().to_str());
             pathDescription += order.to_str() + " ";
         }
         LOG_DEBUG("[STRATEGY] Arbitrage path : {}", pathDescription);
     }
 
-    requestId = broker_.sendRequest(&BNBRequests::SymbolOrderBookTicker, {relatedSymbols.begin(), relatedSymbols.end()});
+    req = BNBRequests::MarketData::symbolOrderBookTicker({relatedSymbols.begin(), relatedSymbols.end()});
+    requestId = broker_.sendRequest(req.first, req.second);
     response = broker_.getResponseForId(requestId);
 
     const json& data = response["result"];
@@ -257,11 +254,17 @@ void CircularArb::run() {
             if (sig.has_value())
             {
                 LOG_INFO("Detected a trading signal, theo PNL : {}, description : {}", sig->pnl, sig->description);
-//                broker_.executeOrders(sig->orders);
-                if (sig->pnl > 10)
+                for (auto& order: sig->orders)
                 {
-                    return;
+                    LOG_INFO("[STRATEGY] Executing order {}", order.to_str());
+                    std::string symbol = "SYM";
+                    double quantity = 0.0;                    
+                    request req = BNBRequests::Trading::testNewOrder(order.getSymbol().to_str(), order.getWay(), order.getType(), order.getQty());
+                    std::string requestId = broker_.sendRequest(req.first, req.second);
+                    nlohmann::json response = broker_.getResponseForId(requestId);
+                    LOG_WARNING("Trade test response: {}", response.dump());
                 }
+
             }
         } catch (const std::exception& e) {
             LOG_ERROR("Error in Circular Arb loop: {}", e.what());
