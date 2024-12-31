@@ -17,10 +17,13 @@ The circular arbitrage strategy has been implemented, not yet tested nor backtes
 Still missing core components.   
 
 # Next steps.
-[BNBBROKER] Add place order.   
 [BNBBROKER] Implement ED25519 and RSA auth on message sign for BNB Broker.   
-Generic Istrategy onmarket data handler.   
-Generic Recorder for MDframes.   
+[FIXBROKER] Add fix connector to binance.   
+[BNBBROKER] Implement full binance API
+[BNBFEEDER] Templated feeder 
+[BNBRECORDER] Fix recorder
+[BNBRECORDER] Generic Recorder for MDframes.   
+[STRATEGY] Generic Istrategy onmarket data handler.   
 Config file base recorder monitor port and configuration.   
 Add into recorder configuration, recording of related symbols to certain coins.     
 Find a method to bypass binance streams limitations.     
@@ -28,6 +31,7 @@ Archive recoding files bz2 and send to a datalake to be queried from a webinterf
 Add unit tests.  
 
 # Done.
+[BNBBROKER] Add place order.   
 [BNBBROKER] Refactor requests hirerachy.   
 [STRATEGY] get market data snapshot on startup
 [BROKER] HMAC message sign for user data and trading
