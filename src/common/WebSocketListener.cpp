@@ -37,7 +37,14 @@ void WebSocketListener::connect(const std::string& uri) {
 }
 
 void WebSocketListener::writeWS(const std::string& message){
-    try {
+    try 
+    {
+        if (~isConnected_) // gain speed by not locking if already connected
+        {
+            std::unique_lock<std::mutex> lock(connectionMutex_);
+            connectionCond_.wait(lock, [this] { return isConnected_; });
+        }
+
         LOG_DEBUG("[WSListener][SEND] Sending over WS {}", message);
         tls_client_.send(hdl_, message, websocketpp::frame::opcode::text);
     } catch (const std::exception& e) {
@@ -57,9 +64,9 @@ void WebSocketListener::stopClient() {
 
 void WebSocketListener::onOpen(websocketpp::connection_hdl hdl) {
     hdl_ = hdl;
-    std::unique_lock<std::mutex> lock(connection_mutex_);
-    is_connected_ = true;
-    connection_cv_.notify_all();
+    std::unique_lock<std::mutex> lock(connectionMutex_);
+    isConnected_ = true;
+    connectionCond_.notify_all();
     LOG_INFO("[WSListener][ON_OPEN] WebSocket connection opened.");
 }
 

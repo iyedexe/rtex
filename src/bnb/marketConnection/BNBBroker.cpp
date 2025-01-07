@@ -61,11 +61,6 @@ void BNBBroker::stop() {
 std::string BNBBroker::sendRequest(const std::string& requestId, const std::string& requestBody)
 {
     LOG_INFO("[BNBBroker] Sending request");
-    {
-        // Wait until connected
-        std::unique_lock<std::mutex> lock(connection_mutex_);
-        connection_cv_.wait(lock, [this] { return is_connected_; });
-    }
     // if (loginOnConnection_ && !(std::is_same<decltype(func), decltype(&BNBRequests::logIn)>::value))
     // {
     //     LOG_INFO("[BNBBroker] Waiting for login");

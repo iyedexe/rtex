@@ -18,12 +18,13 @@ Still missing core components.
 
 # Next steps.
 [BNBBROKER] Implement ED25519 and RSA auth on message sign for BNB Broker.   
-[FIXBROKER] Add fix connector to binance.   
-[BNBBROKER] Implement full binance API
-[BNBFEEDER] Templated feeder 
-[BNBRECORDER] Fix recorder
+[FIXBROKER] Add fix connector to binance.     
+[BNBBROKER] Implement full binance API.  
+[BNBFEEDER] Templated feeder.  
+[BNBRECORDER] Fix recorder.    
 [BNBRECORDER] Generic Recorder for MDframes.   
-[STRATEGY] Generic Istrategy onmarket data handler.   
+[STRATEGY] Generic Istrategy onmarket data handler.  
+[UTILS] add a serializer for enum types (check wih boost).    
 Config file base recorder monitor port and configuration.   
 Add into recorder configuration, recording of related symbols to certain coins.     
 Find a method to bypass binance streams limitations.     

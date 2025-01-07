@@ -27,13 +27,12 @@ protected:
     virtual void onMessage(websocketpp::connection_hdl hdl, wsppclient::message_ptr msg) = 0;
 
     std::shared_ptr<sslcontext> on_tls_init();
-
     websocketpp::connection_hdl hdl_;
-    std::mutex connection_mutex_;
-    std::condition_variable connection_cv_;
-    bool is_connected_ = false;
 
 private:
+    std::condition_variable connectionCond_;
+    bool isConnected_ = false;
+    std::mutex connectionMutex_;
     bool use_tls_;
     wsppclient tls_client_;
     wsppclient::connection_ptr con_;
